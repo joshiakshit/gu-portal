@@ -235,4 +235,3 @@ if (isMain) {
     await browser.close();
   }
 }
-export { login, clickToPage };
