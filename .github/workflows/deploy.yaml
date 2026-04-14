@@ -1,0 +1,41 @@
+name: Deploy gu-portal
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.VM_SSH_KEY }}
+
+      - name: Add VM to known hosts
+        run: |
+          ssh-keyscan -H ${{ secrets.VM_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Copy files to VM
+        run: |
+          rsync -az --delete \
+            --exclude='.git' \
+            --exclude='node_modules' \
+            --exclude='.env' \
+            --exclude='cache' \
+            ./ ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }}:/var/www/gu-portal/
+
+      - name: Install dependencies and restart PM2
+        run: |
+          ssh ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} << 'EOF'
+            export PATH="/home/ash/.nvm/versions/node/v22.22.2/bin:$PATH"
+            cd /var/www/gu-portal
+            npm install --omit=dev
+            pm2 reload ecosystem.config.cjs --update-env
+            sudo systemctl reload nginx
+          EOF

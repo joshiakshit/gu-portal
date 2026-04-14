@@ -1,0 +1,20 @@
+{
+  "name": "gu-portal",
+  "version": "2.0.0",
+  "type": "module",
+  "scripts": {
+    "scrape": "node src/scrape.js",
+    "attendance": "node src/scrape.js attendance",
+    "timetable": "node src/scrape.js timetable",
+    "scheduler": "node src/scheduler.js"
+  },
+  "dependencies": {
+    "cheerio": "^1.0.0",
+    "cors": "^2.8.6",
+    "dotenv": "^16.0.0",
+    "express": "^5.2.1",
+    "node-cron": "^3.0.0",
+    "otpauth": "^9.0.0",
+    "playwright": "^1.40.0"
+  }
+}

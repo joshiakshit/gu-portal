@@ -1,0 +1,7 @@
+.env
+node_modules/
+cache/
+*.dump.html
+attendance_dump.html
+timetable_dump.html
+page_dump.html
