@@ -41,7 +41,7 @@ jobs:
             cd ../frontend
             npm install
             npm run build
-            cd ../backend
+            cd ..
             pm2 reload ecosystem.config.cjs --update-env
             sudo systemctl reload nginx
           EOF
