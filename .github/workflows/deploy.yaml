@@ -35,7 +35,13 @@ jobs:
           ssh ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} << 'EOF'
             export PATH="/home/ash/.nvm/versions/node/v22.22.2/bin:$PATH"
             cd /var/www/gu-portal
+            cd backend
+            npm install --omit=
             npm install --omit=dev
-            pm2 reload ecosystem.config.cjs --update-env
+            cd ../frontend
+            npm install
+            npm run build
+            cd ../backend
+            pm2 reload backend/ecosystem.config.cjs --update-env
             sudo systemctl reload nginx
           EOF
