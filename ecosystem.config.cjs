@@ -4,7 +4,7 @@ module.exports = {
       name: 'gu-portal-api',
       cwd: '/var/www/gu-portal/backend',
       script: 'npm',
-      args: 'start', // Assumes "start": "node src/server.js" in package.json
+      args: 'src/server.js', // Assumes "start": "node src/server.js" in package.json
       env: {
         NODE_ENV: 'production',
         PORT: 3000
