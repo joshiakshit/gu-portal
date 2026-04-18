@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import type { TimetableSlot } from "@/lib/api";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { getCourseName } from "@/lib/courseCatalog";
 
 interface TimetableGridProps {
   slots: TimetableSlot[];
@@ -58,6 +59,7 @@ function MobileSlotCard({
             );
           }
 
+          const courseName = getCourseName(cell.courseCode);
           const typeColors: Record<string, string> = {
             TH: "text-foreground border-border bg-muted/50",
             PR: "text-highlight border-highlight/50 bg-highlight/5",
@@ -72,17 +74,19 @@ function MobileSlotCard({
                 typeColors[cell.type || ""] || "border-border bg-muted/30"
               )}
             >
-              <div className="flex items-center gap-2">
+              <div className="flex min-w-0 items-start gap-2">
                 <span className="text-[10px] text-muted-foreground font-mono w-8">{dayLabel}</span>
-                <div>
-                  <span className="text-xs font-medium text-foreground">{cell.courseCode}</span>
+                <div className="min-w-0">
+                  <span className="block text-xs font-medium leading-tight text-foreground">
+                    {courseName}
+                  </span>
                   {cell.room && (
-                    <span className="text-[10px] text-muted-foreground ml-2">{cell.room}</span>
+                    <span className="mt-1 block text-[10px] text-muted-foreground">{cell.room}</span>
                   )}
                 </div>
               </div>
               {cell.type && (
-                <span className="text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 border rounded">
+                <span className="shrink-0 text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 border rounded">
                   {cell.type}
                 </span>
               )}
@@ -177,18 +181,19 @@ export function TimetableGrid({ slots, days }: TimetableGridProps) {
                   PR: "text-highlight border-highlight/50",
                   PP: "text-amber-600 dark:text-amber-400 border-amber-500/50",
                 };
+                const courseName = getCourseName(cell.courseCode);
 
                 return (
                   <td key={day} className="py-3 px-3">
                     <div className="space-y-1">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-medium text-foreground">
-                          {cell.courseCode}
+                      <div className="flex items-start gap-1.5">
+                        <span className="text-xs font-medium leading-tight text-foreground">
+                          {courseName}
                         </span>
                         {cell.type && (
                           <span
                             className={cn(
-                              "text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 border rounded",
+                              "shrink-0 text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 border rounded",
                               typeColors[cell.type] || "text-muted-foreground border-muted"
                             )}
                           >

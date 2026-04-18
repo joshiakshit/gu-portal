@@ -4,10 +4,9 @@ interface WeekSelectorProps {
   currentWeek: number;
   onPrevious: () => void;
   onNext: () => void;
-  headerText?: string;
 }
 
-export function WeekSelector({ currentWeek, onPrevious, onNext, headerText }: WeekSelectorProps) {
+export function WeekSelector({ currentWeek, onPrevious, onNext }: WeekSelectorProps) {
   return (
     <div className="flex items-center gap-2">
       <button
@@ -18,16 +17,6 @@ export function WeekSelector({ currentWeek, onPrevious, onNext, headerText }: We
       >
         <ChevronLeft className="h-4 w-4 text-foreground" />
       </button>
-      <div className="px-3 py-1.5 rounded-md bg-muted min-w-[160px] text-center">
-        <span className="text-sm font-medium text-foreground">
-          {headerText || `Week ${currentWeek}`}
-        </span>
-        {currentWeek === 0 && (
-          <span className="ml-2 text-[10px] font-mono uppercase tracking-wider text-highlight">
-            Current
-          </span>
-        )}
-      </div>
       <button
         onClick={onNext}
         disabled={currentWeek >= 3}

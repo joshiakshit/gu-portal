@@ -173,7 +173,6 @@ export default function DashboardPage() {
                 currentWeek={currentWeek}
                 onPrevious={() => setCurrentWeek((w) => Math.max(0, w - 1))}
                 onNext={() => setCurrentWeek((w) => Math.min(3, w + 1))}
-                headerText={timetable?.header?.match(/Date : (.+)/)?.[1] || undefined}
               />
             </div>
           </div>
