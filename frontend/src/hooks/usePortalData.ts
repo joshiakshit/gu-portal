@@ -6,15 +6,19 @@ import {
   refreshAttendance,
   refreshTimetable,
   refreshAll,
+  transformAttendance,
 } from "@/lib/api";
 
 export function useAttendance() {
   return useQuery({
     queryKey: ["attendance"],
     queryFn: async () => {
-      const { data } = await fetchAttendance();
-      return data;
-    },
+    const { data } = await fetchAttendance();
+    return {
+      ...data,
+      data: transformAttendance(data.data as any),
+    };
+},
     retry: 1,
     staleTime: 5 * 60 * 1000,
   });

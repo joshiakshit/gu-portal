@@ -1,5 +1,6 @@
 import fs   from 'fs';
 import path from 'path';
+const CACHE_DIR = path.join(path.dirname(new URL(import.meta.url).pathname), '..', 'cache');
 
 
 function parseTimeRange(timeStr) {

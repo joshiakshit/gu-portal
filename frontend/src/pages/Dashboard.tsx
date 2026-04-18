@@ -1,21 +1,18 @@
 import { useState, useMemo } from "react";
-import { CalendarDays, Clock, RefreshCw, Search, Filter } from "lucide-react";
+import { CalendarDays, Clock, RefreshCw, Search } from "lucide-react";
 import { TimetableGrid } from "@/components/TimetableGrid";
 import { AttendanceCard } from "@/components/AttendanceCard";
 import { StatsCard } from "@/components/StatsCard";
 import { WeekSelector } from "@/components/WeekSelector";
 import { CircularProgress } from "@/components/CircularProgress";
 import { useAttendance, useTimetable, useRefresh, useStatus } from "@/hooks/usePortalData";
+import { useAttendanceFilter } from "@/hooks/useAttendanceFilter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 
-type AttendanceFilter = "all" | "safe" | "warning" | "danger";
-
 export default function DashboardPage() {
   const [currentWeek, setCurrentWeek] = useState(0);
-  const [attFilter, setAttFilter] = useState<AttendanceFilter>("all");
-  const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
 
   const { data: attendance, isLoading: attLoading, error: attError } = useAttendance();
@@ -32,36 +29,26 @@ export default function DashboardPage() {
 
   const timetableDays = useMemo(() => {
     if (!timetable?.slots || timetable.slots.length === 0) return [];
-    const slot = timetable.slots[0];
-    return Object.keys(slot).filter((k) => k !== "time");
+    return Object.keys(timetable.slots[0]).filter((k) => k !== "time");
   }, [timetable]);
 
   const attendanceData = useMemo(() => attendance?.data || [], [attendance]);
-  const overallAttendance = attendanceData.length > 0
-    ? Math.round(attendanceData.reduce((acc, curr) => acc + curr.percentage, 0) / attendanceData.length)
-    : 0;
+  const overallAttendance =
+    attendanceData.length > 0
+      ? Math.round(attendanceData.reduce((acc, curr) => acc + curr.percentage, 0) / attendanceData.length)
+      : 0;
   const totalClasses = attendanceData.reduce((acc, curr) => acc + curr.total, 0);
   const attendedClasses = attendanceData.reduce((acc, curr) => acc + curr.attended, 0);
 
-  // Filter + search attendance
-  const filteredAttendance = useMemo(() => {
-    let data = attendanceData;
-    if (attFilter !== "all") {
-      data = data.filter((c) => {
-        if (attFilter === "safe") return c.percentage >= 75;
-        if (attFilter === "warning") return c.percentage >= 65 && c.percentage < 75;
-        return c.percentage < 65;
-      });
-    }
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      data = data.filter((c) => c.course.toLowerCase().includes(q) || c.code.toLowerCase().includes(q));
-    }
-    return data;
-  }, [attendanceData, attFilter, searchQuery]);
+  const { attFilter, setAttFilter, searchQuery, setSearchQuery, filteredAttendance, filterButtons } =
+    useAttendanceFilter(attendanceData);
 
   const lastSynced = attendance?.cachedAt
-    ? new Date(attendance.cachedAt).toLocaleString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })
+    ? new Date(attendance.cachedAt).toLocaleString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      })
     : "Never";
 
   const isScraping = status?.scraping ?? false;
@@ -69,27 +56,29 @@ export default function DashboardPage() {
   const handleRefreshAttendance = () => {
     refreshAtt.mutate(undefined, {
       onSuccess: () => toast({ title: "Attendance refreshed" }),
-      onError: (err: any) => toast({ title: "Refresh failed", description: err?.response?.data?.error || err.message, variant: "destructive" }),
+      onError: (err: any) =>
+        toast({
+          title: "Refresh failed",
+          description: err?.response?.data?.error || err.message,
+          variant: "destructive",
+        }),
     });
   };
 
   const handleRefreshTimetable = () => {
     refreshTT.mutate(undefined, {
       onSuccess: () => toast({ title: "Timetable refreshed" }),
-      onError: (err: any) => toast({ title: "Refresh failed", description: err?.response?.data?.error || err.message, variant: "destructive" }),
+      onError: (err: any) =>
+        toast({
+          title: "Refresh failed",
+          description: err?.response?.data?.error || err.message,
+          variant: "destructive",
+        }),
     });
   };
 
-  const filterButtons: { label: string; value: AttendanceFilter; count: number }[] = [
-    { label: "All", value: "all", count: attendanceData.length },
-    { label: "On Track", value: "safe", count: attendanceData.filter((c) => c.percentage >= 75).length },
-    { label: "At Risk", value: "warning", count: attendanceData.filter((c) => c.percentage >= 65 && c.percentage < 75).length },
-    { label: "Critical", value: "danger", count: attendanceData.filter((c) => c.percentage < 65).length },
-  ];
-
   return (
     <div className="flex-1 flex flex-col min-h-screen">
-      {/* Header */}
       <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="px-4 md:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -101,7 +90,11 @@ export default function DashboardPage() {
           </div>
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
             <div className="flex items-center gap-1.5">
-              <span className={`w-2 h-2 rounded-full ${isScraping ? "bg-amber-500 animate-pulse-dot" : "bg-green-500"}`} />
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  isScraping ? "bg-amber-500 animate-pulse-dot" : "bg-green-500"
+                }`}
+              />
               <span className="hidden sm:inline font-mono">
                 {isScraping ? "Syncing…" : `Synced ${lastSynced}`}
               </span>
@@ -110,9 +103,7 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      {/* Content */}
       <div className="flex-1 px-4 md:px-8 py-6 space-y-8">
-        {/* Error Banner */}
         {(attError || ttError) && (
           <div className="p-4 rounded-lg border border-destructive/50 bg-destructive/5 flex items-center gap-3 animate-fade-in">
             <div className="w-8 h-8 rounded-full bg-destructive/10 flex items-center justify-center shrink-0">
@@ -127,7 +118,6 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Stats */}
         <section className="animate-fade-in">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {attLoading ? (
@@ -145,11 +135,7 @@ export default function DashboardPage() {
                   value={`${attendedClasses}/${totalClasses}`}
                   sublabel="Total this semester"
                 />
-                <StatsCard
-                  label="Active Courses"
-                  value={attendanceData.length}
-                  sublabel="This semester"
-                />
+                <StatsCard label="Active Courses" value={attendanceData.length} sublabel="This semester" />
                 <StatsCard
                   label="Scraper"
                   value={isScraping ? "Running" : "Idle"}
@@ -161,7 +147,6 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        {/* Timetable */}
         <section className="animate-fade-in" style={{ animationDelay: "100ms" }}>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
             <div className="flex items-center gap-3">
@@ -196,7 +181,9 @@ export default function DashboardPage() {
           <div className="rounded-lg border border-border bg-card p-4 md:p-6">
             {ttLoading ? (
               <div className="space-y-3">
-                {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-12 rounded" />)}
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <Skeleton key={i} className="h-12 rounded" />
+                ))}
               </div>
             ) : timetable?.slots && timetable.slots.length > 0 ? (
               <TimetableGrid slots={timetable.slots} header={timetable.header} days={timetableDays} />
@@ -216,7 +203,6 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        {/* Attendance */}
         <section className="animate-fade-in" style={{ animationDelay: "200ms" }}>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
             <div className="flex items-center gap-3">
@@ -238,7 +224,6 @@ export default function DashboardPage() {
             </button>
           </div>
 
-          {/* Search + Filter Bar */}
           {!attLoading && attendanceData.length > 0 && (
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-4">
               <div className="relative flex-1 max-w-xs">
@@ -274,7 +259,9 @@ export default function DashboardPage() {
 
           {attLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {[1, 2, 3].map((i) => <Skeleton key={i} className="h-32 rounded-lg" />)}
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-32 rounded-lg" />
+              ))}
             </div>
           ) : filteredAttendance.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -290,7 +277,6 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div className="rounded-lg border border-border bg-card p-12 text-center">
-              <Filter className="w-8 h-8 text-muted-foreground/30 mx-auto mb-3" />
               <p className="text-sm text-muted-foreground">
                 {searchQuery || attFilter !== "all"
                   ? "No courses match your filters"

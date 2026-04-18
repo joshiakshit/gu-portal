@@ -20,6 +20,21 @@ export interface AttendanceCourse {
   percentage: number;
 }
 
+export function transformAttendance(raw: Record<string, string>[]): AttendanceCourse[] {
+  return raw
+    .map((row) => {
+      const code = (row["Course Code"] || row["course code"] || "").trim();
+      const course = (row["Course Name"] || row["Subject"] || row["Course Short Name"] || code).trim();
+      const ad = row["Attended/Delivered"] || row["attended/delivered"] || "";
+      const [attendedStr, totalStr] = ad.split("/");
+      const attended = parseInt(attendedStr) || 0;
+      const total = parseInt(totalStr) || 0;
+      const percentage = total > 0 ? Math.round((attended / total) * 100) : 0;
+      return { code, course, attended, total, percentage };
+    })
+    .filter((r) => r.code && r.total > 0);
+}
+
 export interface AttendanceResponse {
   success: boolean;
   cachedAt: string;

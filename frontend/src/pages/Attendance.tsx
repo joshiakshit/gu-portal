@@ -1,17 +1,14 @@
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import { BookOpen, RefreshCw, Search, Filter, TrendingUp, TrendingDown } from "lucide-react";
 import { AttendanceCard } from "@/components/AttendanceCard";
 import { CircularProgress } from "@/components/CircularProgress";
 import { useAttendance, useRefresh, useStatus } from "@/hooks/usePortalData";
+import { useAttendanceFilter } from "@/hooks/useAttendanceFilter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 
-type AttendanceFilter = "all" | "safe" | "warning" | "danger";
-
 export default function AttendancePage() {
-  const [attFilter, setAttFilter] = useState<AttendanceFilter>("all");
-  const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
 
   const { data: attendance, isLoading } = useAttendance();
@@ -20,43 +17,35 @@ export default function AttendancePage() {
   const isScraping = status?.scraping ?? false;
 
   const attendanceData = useMemo(() => attendance?.data || [], [attendance]);
-  const overallAttendance = attendanceData.length > 0
-    ? Math.round(attendanceData.reduce((a, c) => a + c.percentage, 0) / attendanceData.length)
-    : 0;
+  const overallAttendance =
+    attendanceData.length > 0
+      ? Math.round(attendanceData.reduce((a, c) => a + c.percentage, 0) / attendanceData.length)
+      : 0;
   const totalClasses = attendanceData.reduce((a, c) => a + c.total, 0);
   const attendedClasses = attendanceData.reduce((a, c) => a + c.attended, 0);
-  const bestCourse = attendanceData.length > 0 ? attendanceData.reduce((a, c) => c.percentage > a.percentage ? c : a) : null;
-  const worstCourse = attendanceData.length > 0 ? attendanceData.reduce((a, c) => c.percentage < a.percentage ? c : a) : null;
+  const bestCourse =
+    attendanceData.length > 0
+      ? attendanceData.reduce((a, c) => (c.percentage > a.percentage ? c : a))
+      : null;
+  const worstCourse =
+    attendanceData.length > 0
+      ? attendanceData.reduce((a, c) => (c.percentage < a.percentage ? c : a))
+      : null;
 
-  const filteredAttendance = useMemo(() => {
-    let data = attendanceData;
-    if (attFilter !== "all") {
-      data = data.filter((c) => {
-        if (attFilter === "safe") return c.percentage >= 75;
-        if (attFilter === "warning") return c.percentage >= 65 && c.percentage < 75;
-        return c.percentage < 65;
-      });
-    }
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      data = data.filter((c) => c.course.toLowerCase().includes(q) || c.code.toLowerCase().includes(q));
-    }
-    return data;
-  }, [attendanceData, attFilter, searchQuery]);
+  const { attFilter, setAttFilter, searchQuery, setSearchQuery, filteredAttendance, filterButtons } =
+    useAttendanceFilter(attendanceData);
 
   const handleRefresh = () => {
     refreshAtt.mutate(undefined, {
       onSuccess: () => toast({ title: "Attendance refreshed" }),
-      onError: (err: any) => toast({ title: "Refresh failed", description: err?.response?.data?.error || err.message, variant: "destructive" }),
+      onError: (err: any) =>
+        toast({
+          title: "Refresh failed",
+          description: err?.response?.data?.error || err.message,
+          variant: "destructive",
+        }),
     });
   };
-
-  const filterButtons: { label: string; value: AttendanceFilter; count: number }[] = [
-    { label: "All", value: "all", count: attendanceData.length },
-    { label: "On Track", value: "safe", count: attendanceData.filter((c) => c.percentage >= 75).length },
-    { label: "At Risk", value: "warning", count: attendanceData.filter((c) => c.percentage >= 65 && c.percentage < 75).length },
-    { label: "Critical", value: "danger", count: attendanceData.filter((c) => c.percentage < 65).length },
-  ];
 
   return (
     <div className="flex-1 flex flex-col min-h-screen">
@@ -86,7 +75,6 @@ export default function AttendancePage() {
       </header>
 
       <div className="flex-1 px-4 md:px-8 py-6 space-y-6">
-        {/* Overview stats */}
         {!isLoading && attendanceData.length > 0 && (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-in">
             <div className="p-5 rounded-lg border border-highlight/50 bg-card flex items-center gap-4">
@@ -98,7 +86,9 @@ export default function AttendancePage() {
             </div>
             <div className="p-5 rounded-lg border border-border bg-card">
               <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Total</p>
-              <p className="text-lg font-semibold text-foreground mt-1">{attendedClasses}/{totalClasses}</p>
+              <p className="text-lg font-semibold text-foreground mt-1">
+                {attendedClasses}/{totalClasses}
+              </p>
               <p className="text-[11px] text-muted-foreground">Classes attended</p>
             </div>
             {bestCourse && (
@@ -115,7 +105,9 @@ export default function AttendancePage() {
               <div className="p-5 rounded-lg border border-border bg-card">
                 <div className="flex items-center gap-1.5 mb-1">
                   <TrendingDown className="w-3 h-3 text-destructive" />
-                  <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Needs Work</p>
+                  <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">
+                    Needs Work
+                  </p>
                 </div>
                 <p className="text-sm font-medium text-foreground truncate">{worstCourse.code}</p>
                 <p className="text-lg font-semibold text-destructive">{worstCourse.percentage}%</p>
@@ -124,9 +116,11 @@ export default function AttendancePage() {
           </div>
         )}
 
-        {/* Search + Filter */}
         {!isLoading && attendanceData.length > 0 && (
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 animate-fade-in" style={{ animationDelay: "100ms" }}>
+          <div
+            className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 animate-fade-in"
+            style={{ animationDelay: "100ms" }}
+          >
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
               <input
@@ -156,10 +150,11 @@ export default function AttendancePage() {
           </div>
         )}
 
-        {/* Cards */}
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {[1, 2, 3, 4, 5, 6].map((i) => <Skeleton key={i} className="h-32 rounded-lg" />)}
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <Skeleton key={i} className="h-32 rounded-lg" />
+            ))}
           </div>
         ) : filteredAttendance.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -176,7 +171,11 @@ export default function AttendancePage() {
               {searchQuery || attFilter !== "all" ? "No courses match your filters" : "No attendance data"}
             </p>
             {!searchQuery && attFilter === "all" && (
-              <button onClick={handleRefresh} disabled={refreshAtt.isPending || isScraping} className="mt-3 text-xs text-highlight hover:underline">
+              <button
+                onClick={handleRefresh}
+                disabled={refreshAtt.isPending || isScraping}
+                className="mt-3 text-xs text-highlight hover:underline"
+              >
                 Refresh from server
               </button>
             )}
